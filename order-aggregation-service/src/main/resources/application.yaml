@@ -18,8 +18,8 @@ spring:
 
 product:
   svc:
-    host: http://localhost:3001
+    host: "${PRODUCT_SVC_HOST:http://localhost:3001}"
 order:
   svc:
-    host: http://localhost:3002
+    host: "${ORDER_SVC_HOST:http://localhost:3002}"
 

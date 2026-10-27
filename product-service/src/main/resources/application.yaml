@@ -29,7 +29,7 @@ sharding:
       master:
         type: org.apache.commons.dbcp.BasicDataSource
         driver-class-name: com.mysql.jdbc.Driver
-        url: jdbc:mysql://127.0.0.1:3306/seata_product?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&autoReconnect=true&serverTimezone=Hongkong
+        url: "jdbc:mysql://${DB_HOST:127.0.0.1}:3306/seata_product?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&autoReconnect=true&serverTimezone=Hongkong&useSSL=false&allowPublicKeyRetrieval=true"
         username: root
         password: 123456
         validationQuery: select 1
@@ -37,7 +37,7 @@ sharding:
       slave0:
         type: org.apache.commons.dbcp.BasicDataSource
         driver-class-name: com.mysql.jdbc.Driver
-        url: jdbc:mysql://127.0.0.1:3306/seata_product?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&autoReconnect=true&serverTimezone=Hongkong
+        url: "jdbc:mysql://${DB_HOST:127.0.0.1}:3306/seata_product?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&autoReconnect=true&serverTimezone=Hongkong&useSSL=false&allowPublicKeyRetrieval=true"
         username: root
         password: 123456
         validationQuery: select 1

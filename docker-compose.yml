@@ -1,0 +1,110 @@
+services:
+  mysql:
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      TZ: Asia/Shanghai
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init.sh:/docker-entrypoint-initdb.d/init.sh
+      - ./docker/mysql/seata.sql:/docker-entrypoint-initdb.d/sql/seata.sql:ro
+      - ./order-service/script/seata_order.sql:/docker-entrypoint-initdb.d/sql/seata_order.sql:ro
+      - ./product-service/script/seata_product.sql:/docker-entrypoint-initdb.d/sql/seata_product.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p123456"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
+
+  seata-server:
+    build:
+      context: .
+      dockerfile: docker/seata/Dockerfile
+    ports:
+      - "8091:8091"
+    volumes:
+      - ./docker/seata/start.sh:/seata-server/start.sh:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  product-service:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      args:
+        SERVICE: product-service
+    environment:
+      DB_HOST: mysql
+      SEATA_CONFIG_NAME: file:/seata/registry
+      TZ: Asia/Shanghai
+    ports:
+      - "3001:3001"
+    volumes: &seata-client-config
+      - ./docker/seata-client/registry.conf:/seata/registry.conf:ro
+      - ./docker/seata-client/application.conf:/seata/application.conf:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      seata-server:
+        condition: service_healthy
+
+  order-service:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      args:
+        SERVICE: order-service
+    environment:
+      DB_HOST: mysql
+      SEATA_CONFIG_NAME: file:/seata/registry
+      TZ: Asia/Shanghai
+    ports:
+      - "3002:3002"
+    volumes: *seata-client-config
+    depends_on:
+      mysql:
+        condition: service_healthy
+      seata-server:
+        condition: service_healthy
+
+  order-aggregation-service:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      args:
+        SERVICE: order-aggregation-service
+    environment:
+      SEATA_CONFIG_NAME: file:/seata/registry
+      PRODUCT_SVC_HOST: http://product-service:3001
+      ORDER_SVC_HOST: http://order-service:3002
+      TZ: Asia/Shanghai
+    ports:
+      - "3003:3003"
+    volumes: *seata-client-config
+    depends_on:
+      mysql:
+        condition: service_healthy
+      seata-server:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+
+volumes:
+  mysql-data:
